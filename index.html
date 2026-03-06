@@ -2,57 +2,69 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- ズームを禁止し、アプリのような操作感にするためのViewport設定 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ビジュアルタイマー</title>
-  
-  <!-- ========================================== -->
-  <!-- アイコン・iOS（ホーム画面）向け設定          -->
-  <!-- ========================================== -->
-  
-  <!-- モダンブラウザ向けの高画質SVGファビコン -->
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-
-  <!-- iOS タッチアイコン（ホーム画面用・180x180のPNG画像） -->
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  
-  <!-- iOS ホーム画面に追加した際、SafariのUIを消して全画面起動させる設定 -->
+  <link rel="icon" href="/timer/favicon.svg" type="image/svg+xml">
+  <link rel="/timer/apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <!-- ホーム画面でのアプリ名（短めが推奨） -->
   <meta name="apple-mobile-web-app-title" content="Timer">
-  <!-- ステータスバー（時計や電池の帯）の見た目をアプリに馴染ませる -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
-  <!-- ========================================== -->
-
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
   <style>
-    /* ユーザーのテキスト選択や長押しメニューを完全に防止（ネイティブアプリ感を出すため） */
     body {
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
-      overflow: hidden; /* 全画面時の不要なスクロールを防止 */
+      overflow: hidden;
     }
-    /* スワイプ時のブラウザデフォルトのスクロールなどを防ぐ */
     #timer-svg {
       touch-action: none;
+    }
+
+    /* カラーパレットのスタイル */
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .color-swatch:hover {
+      transform: scale(1.15);
+    }
+    .color-swatch.active {
+      border-color: white;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.25);
+      transform: scale(1.1);
+    }
+
+    /* カラーパネルのアニメーション */
+    #color-panel {
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+    #color-panel.open {
+      max-height: 80px;
+      opacity: 1;
     }
   </style>
 </head>
 <body class="min-h-screen bg-[#f4f7f8] flex flex-col items-center justify-center p-4">
 
-  <div class="mb-6 md:mb-10 text-center">
-    <h1 class="text-2xl md:text-3xl font-bold text-gray-700 mb-2">ビジュアルタイマー</h1>
+  <div class="mb-4 md:mb-8 text-center">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-700 mb-1">ビジュアルタイマー</h1>
     <p class="text-sm md:text-base text-gray-500">文字盤をドラッグして時間をセット</p>
   </div>
 
-  <div class="flex flex-col items-center gap-8 md:gap-12 w-full max-w-md">
-    
+  <div class="flex flex-col items-center gap-4 md:gap-6 w-full max-w-md">
+
     <!-- タイマー本体の外枠 -->
-    <div id="timer-frame" class="w-[320px] h-[320px] md:w-[420px] md:h-[420px] rounded-[3rem] md:rounded-[4rem] shadow-2xl p-4 md:p-6 relative transition-colors duration-500 bg-[#9bd4e4]">
+    <div id="timer-frame" class="w-[320px] h-[320px] md:w-[420px] md:h-[420px] rounded-[3rem] md:rounded-[4rem] shadow-2xl p-4 md:p-6 relative transition-colors duration-500" style="background-color: var(--theme-outer, #9bd4e4);">
       
       <!-- 白い文字盤のコンテナ -->
       <div class="w-full h-full bg-[#fdfdfd] rounded-[2.5rem] md:rounded-[3.2rem] shadow-inner relative overflow-hidden flex items-center justify-center">
@@ -64,33 +76,31 @@
             </filter>
           </defs>
 
-          <!-- 静的な目盛りと数字（JavaScriptで生成） -->
-          <g id="static-dial"></g>
+          <!-- 静的な目盛り（JavaScriptで生成） -->
+          <g id="static-ticks"></g>
 
-          <!-- 下部のロゴテキスト -->
-          <text x="200" y="360" text-anchor="middle" font-size="14" font-weight="800" fill="#cbd5e1" letter-spacing="3" style="font-family: system-ui, sans-serif;">
-            VISUAL TIMER
-          </text>
+          <!-- 残り時間を示す色付きの扇形（数字の内側に収まるよう半径を小さく） -->
+          <path id="time-sector" fill="var(--theme-sector, #185d6e)"></path>
 
-          <!-- 残り時間を示す色付きの扇形 -->
-          <path id="time-sector" fill="#185d6e"></path>
+          <!-- 数字（扇形の上に描画されるよう、扇形の後に配置） -->
+          <g id="static-numbers"></g>
 
           <!-- 中央のノブとポインター -->
           <g id="knob-group" filter="url(#knob-shadow)">
-            <rect x="195" y="77" width="10" height="123" fill="#aee0ef" rx="5" />
-            <circle cx="200" cy="200" r="30" fill="#aee0ef" />
-            <circle cx="200" cy="200" r="22" fill="#9bd4e4" />
+            <rect x="195" y="77" width="10" height="123" fill="var(--theme-knob, #aee0ef)" rx="5" />
+            <circle cx="200" cy="200" r="30" fill="var(--theme-knob, #aee0ef)" />
+            <circle cx="200" cy="200" r="22" fill="var(--theme-outer, #9bd4e4)" />
           </g>
 
-          <!-- イベント受け取り用の透明なオーバーレイ（盤面全体） -->
-          <circle 
-            id="interaction-overlay"
-            cx="200" cy="200" r="200" 
-            fill="transparent" 
-            cursor="grab"
-          />
+          <!-- イベント受け取り用の透明なオーバーレイ -->
+          <circle id="interaction-overlay" cx="200" cy="200" r="200" fill="transparent" cursor="grab" />
         </svg>
       </div>
+    </div>
+
+    <!-- カラーパレットパネル -->
+    <div id="color-panel" class="flex items-center justify-center gap-3 bg-white px-6 py-3 rounded-full shadow-md w-full max-w-sm">
+      <!-- スウォッチはJSで生成 -->
     </div>
 
     <!-- 下部のコントロールパネル -->
@@ -118,14 +128,65 @@
           <i data-lucide="volume-2" id="icon-volume-on" class="w-[22px] h-[22px]"></i>
           <i data-lucide="volume-x" id="icon-volume-off" class="hidden w-[22px] h-[22px]"></i>
         </button>
+
+        <!-- カラーボタン -->
+        <button id="color-btn" class="p-3 md:p-4 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors active:scale-95 flex items-center justify-center">
+          <i data-lucide="palette" class="w-[22px] h-[22px]"></i>
+        </button>
       </div>
     </div>
 
   </div>
 
   <script>
+    // --- カラーテーマ定義 ---
+    const COLOR_THEMES = [
+      { name: 'sky',     outer: '#9bd4e4', sector: '#185d6e', knob: '#aee0ef', swatch: '#9bd4e4' },
+      { name: 'coral',   outer: '#f4a28c', sector: '#a63e20', knob: '#f9c4b4', swatch: '#f4a28c' },
+      { name: 'mint',    outer: '#82d9b0', sector: '#1a6645', knob: '#aeecd0', swatch: '#82d9b0' },
+      { name: 'lavender',outer: '#b3a6e8', sector: '#3b2d8e', knob: '#d4cef7', swatch: '#b3a6e8' },
+      { name: 'peach',   outer: '#f5c97a', sector: '#8a5a00', knob: '#fce3a8', swatch: '#f5c97a' },
+      { name: 'slate',   outer: '#8fa3b1', sector: '#2c3e50', knob: '#b8c9d4', swatch: '#8fa3b1' },
+    ];
+    let currentThemeIndex = 0;
+
+    const applyTheme = (index) => {
+      currentThemeIndex = index;
+      const t = COLOR_THEMES[index];
+      const root = document.documentElement;
+      root.style.setProperty('--theme-outer',  t.outer);
+      root.style.setProperty('--theme-sector', t.sector);
+      root.style.setProperty('--theme-knob',   t.knob);
+      // SVGのfill/strokeはCSSカスタムプロパティで直接反映されないケースがあるため明示更新
+      document.getElementById('time-sector').setAttribute('fill', t.sector);
+      document.querySelectorAll('.knob-outer').forEach(el => el.setAttribute('fill', t.outer));
+      document.querySelectorAll('.knob-accent').forEach(el => el.setAttribute('fill', t.knob));
+      // フレーム背景
+      document.getElementById('timer-frame').style.backgroundColor = t.outer;
+      // スウォッチのactive状態
+      document.querySelectorAll('.color-swatch').forEach((sw, i) => {
+        sw.classList.toggle('active', i === index);
+      });
+    };
+
+    // カラーパネルにスウォッチを生成
+    const colorPanel = document.getElementById('color-panel');
+    COLOR_THEMES.forEach((t, i) => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch' + (i === 0 ? ' active' : '');
+      sw.style.backgroundColor = t.swatch;
+      sw.title = t.name;
+      sw.addEventListener('click', () => applyTheme(i));
+      colorPanel.appendChild(sw);
+    });
+
+    // カラーボタンでパネルをトグル
+    document.getElementById('color-btn').addEventListener('click', () => {
+      colorPanel.classList.toggle('open');
+    });
+
     // --- 状態管理 ---
-    let remainingSeconds = 2700; // 初期値45分
+    let remainingSeconds = 2700;
     let isRunning = false;
     let isSoundEnabled = true;
     let isRinging = false;
@@ -151,34 +212,21 @@
     // --- Web Audio API ---
     let audioCtx = null;
     const getAudioContext = () => {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       return audioCtx;
     };
-
     const initAudio = () => {
       const ctx = getAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume();
-      }
+      if (ctx?.state === 'suspended') ctx.resume();
     };
-
     const playAlarm = () => {
       const ctx = getAudioContext();
       if (!ctx) return;
-      
       isRinging = true;
       updateUI();
-      
       if (ringTimeoutId) clearTimeout(ringTimeoutId);
-      ringTimeoutId = setTimeout(() => {
-        isRinging = false;
-        updateUI();
-      }, 4000);
-
+      ringTimeoutId = setTimeout(() => { isRinging = false; updateUI(); }, 4000);
       if (!isSoundEnabled) return;
-
       const playTone = (freq, startTime, duration) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -193,7 +241,6 @@
         osc.start(startTime);
         osc.stop(startTime + duration);
       };
-
       const now = ctx.currentTime;
       playTone(880, now, 0.15);
       playTone(880, now + 0.25, 0.15);
@@ -202,32 +249,44 @@
     };
 
     // --- 描画処理 ---
+    // 目盛りと数字を別レイヤーに分離
+    // sectorRadius=118 → 数字は135、目盛り外端=188
+    // 数字は扇形(r=118)の外側、目盛り内端(172/180)の内側 → textRadius=155
+    const SECTOR_RADIUS = 118;
+    const TEXT_RADIUS = 152; // 数字の描画半径（扇形外側・目盛り内側）
+
     const drawStaticDial = () => {
-      const staticDial = document.getElementById('static-dial');
-      let html = '';
-      
+      const ticksEl = document.getElementById('static-ticks');
+      const numsEl  = document.getElementById('static-numbers');
+      let ticksHtml = '';
+      let numsHtml  = '';
+
       for (let i = 0; i < 60; i++) {
         const isMajor = i % 5 === 0;
-        const angle = (-90 - i * 6) * (Math.PI / 180);
-        
-        const outerRadius = 188;
-        const innerRadius = isMajor ? 172 : 180;
-        const x1 = 200 + innerRadius * Math.cos(angle);
-        const y1 = 200 + innerRadius * Math.sin(angle);
-        const x2 = 200 + outerRadius * Math.cos(angle);
-        const y2 = 200 + outerRadius * Math.sin(angle);
-        
-        html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#a0aab0" stroke-width="${isMajor ? 3 : 1.5}" stroke-linecap="round" />`;
+        // 時計回り：12時=0分、右=15分、下=30分、左=45分
+        // angle: 12時(-90°)から時計回りに i*6°
+        const angle = (-90 + i * 6) * (Math.PI / 180);
+
+        const outerR = 188;
+        const innerR = isMajor ? 172 : 180;
+        const x1 = 200 + innerR * Math.cos(angle);
+        const y1 = 200 + innerR * Math.sin(angle);
+        const x2 = 200 + outerR * Math.cos(angle);
+        const y2 = 200 + outerR * Math.sin(angle);
+
+        ticksHtml += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="#a0aab0" stroke-width="${isMajor ? 3 : 1.5}" stroke-linecap="round" />`;
 
         if (isMajor) {
-          const textRadius = 145;
-          const tx = 200 + textRadius * Math.cos(angle);
-          const ty = 200 + textRadius * Math.sin(angle);
+          const tx = 200 + TEXT_RADIUS * Math.cos(angle);
+          const ty = 200 + TEXT_RADIUS * Math.sin(angle);
           const num = i === 0 ? '0' : i;
-          html += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="central" font-size="26" font-weight="bold" fill="#3a4b52" style="font-family: system-ui, sans-serif;">${num}</text>`;
+          // 数字は扇形レイヤーとは別グループに描画されるので干渉なし
+          numsHtml += `<text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="bold" fill="#3a4b52" style="font-family: system-ui, sans-serif;">${num}</text>`;
         }
       }
-      staticDial.innerHTML = html;
+
+      ticksEl.innerHTML = ticksHtml;
+      numsEl.innerHTML  = numsHtml;
     };
 
     const formatTime = (seconds) => {
@@ -237,41 +296,41 @@
     };
 
     const updateUI = () => {
-      // 1. デジタル時間の更新
       timeDisplay.textContent = formatTime(remainingSeconds);
 
-      // 2. SVG扇形の更新
       const ratio = remainingSeconds / 3600;
       const deg = ratio * 360;
-      const sectorRadius = 118;
+      const r = SECTOR_RADIUS;
 
       if (remainingSeconds <= 0) {
         timeSector.setAttribute('d', '');
       } else if (remainingSeconds >= 3600) {
-        // SVGのArcは完全な円を描画できないため、2つの半円で描画
-        timeSector.setAttribute('d', `M 200 ${200 - sectorRadius} A ${sectorRadius} ${sectorRadius} 0 1 0 200 ${200 + sectorRadius} A ${sectorRadius} ${sectorRadius} 0 1 0 200 ${200 - sectorRadius} Z`);
+        timeSector.setAttribute('d', `M 200 ${200 - r} A ${r} ${r} 0 1 1 200 ${200 + r} A ${r} ${r} 0 1 1 200 ${200 - r} Z`);
       } else {
-        const angle = (-90 - deg) * (Math.PI / 180);
-        const ex = 200 + sectorRadius * Math.cos(angle);
-        const ey = 200 + sectorRadius * Math.sin(angle);
+        // 時計回り：12時スタート、時計回りに deg 度
+        // sweep-flag=1 で時計回り
+        const angleRad = (-90 + deg) * (Math.PI / 180);
+        const ex = 200 + r * Math.cos(angleRad);
+        const ey = 200 + r * Math.sin(angleRad);
         const largeArcFlag = deg > 180 ? 1 : 0;
-        const d = `M 200 200 L 200 ${200 - sectorRadius} A ${sectorRadius} ${sectorRadius} 0 ${largeArcFlag} 0 ${ex} ${ey} Z`;
+        const d = `M 200 200 L 200 ${200 - r} A ${r} ${r} 0 ${largeArcFlag} 1 ${ex.toFixed(2)} ${ey.toFixed(2)} Z`;
         timeSector.setAttribute('d', d);
       }
 
-      // 3. ノブの回転
-      knobGroup.setAttribute('transform', `rotate(${-deg}, 200, 200)`);
+      // ノブも時計回りに回転
+      knobGroup.setAttribute('transform', `rotate(${deg}, 200, 200)`);
 
-      // 4. アラーム時のスタイル変更
+      // アラーム時のスタイル
+      const theme = COLOR_THEMES[currentThemeIndex];
       if (isRinging) {
-        timerFrame.classList.remove('bg-[#9bd4e4]');
-        timerFrame.classList.add('bg-red-400', 'animate-pulse', 'shadow-red-200/50');
+        timerFrame.style.backgroundColor = '';
+        timerFrame.classList.add('bg-red-400', 'animate-pulse');
       } else {
-        timerFrame.classList.remove('bg-red-400', 'animate-pulse', 'shadow-red-200/50');
-        timerFrame.classList.add('bg-[#9bd4e4]');
+        timerFrame.classList.remove('bg-red-400', 'animate-pulse');
+        timerFrame.style.backgroundColor = theme.outer;
       }
 
-      // 5. ボタン状態の更新
+      // ボタン状態
       if (remainingSeconds === 0 && !isRunning) {
         toggleBtn.disabled = true;
         toggleBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -281,18 +340,17 @@
       }
 
       if (isRunning) {
-        toggleBtn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600', 'shadow-emerald-500/30');
-        toggleBtn.classList.add('bg-amber-500', 'hover:bg-amber-600', 'shadow-amber-500/30');
+        toggleBtn.classList.replace('bg-emerald-500', 'bg-amber-500');
+        toggleBtn.classList.replace('hover:bg-emerald-600', 'hover:bg-amber-600');
         iconPlay.classList.add('hidden');
         iconPause.classList.remove('hidden');
       } else {
-        toggleBtn.classList.remove('bg-amber-500', 'hover:bg-amber-600', 'shadow-amber-500/30');
-        toggleBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600', 'shadow-emerald-500/30');
+        toggleBtn.classList.replace('bg-amber-500', 'bg-emerald-500');
+        toggleBtn.classList.replace('hover:bg-amber-600', 'hover:bg-emerald-600');
         iconPlay.classList.remove('hidden');
         iconPause.classList.add('hidden');
       }
 
-      // 音量ボタンのアイコン更新
       if (isSoundEnabled) {
         iconVolumeOn.classList.remove('hidden');
         iconVolumeOff.classList.add('hidden');
@@ -301,7 +359,6 @@
         iconVolumeOff.classList.remove('hidden');
       }
 
-      // カーソルの更新
       interactionOverlay.setAttribute('cursor', isDragging ? 'grabbing' : 'grab');
     };
 
@@ -334,23 +391,20 @@
       const rect = svgEl.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
       const dx = clientX - cx;
       const dy = clientY - cy;
-      
-      if (Math.sqrt(dx * dx + dy * dy) < 30) return null; // 中心すぎたら無視
+      if (Math.sqrt(dx * dx + dy * dy) < 30) return null;
 
+      // 時計回り計算：12時=0、時計回りに増加
       let angle = Math.atan2(dy, dx);
-      let deg = -(angle + Math.PI / 2) * (180 / Math.PI);
+      let deg = (angle + Math.PI / 2) * (180 / Math.PI); // 12時基準、時計回り正
       if (deg < 0) deg += 360;
-      
-      let seconds = Math.round((deg / 360) * 3600);
-      seconds = Math.round(seconds / 60) * 60; // 1分単位にスナップ
-      if (seconds > 3600) seconds = 3600;
 
+      let seconds = Math.round((deg / 360) * 3600);
+      seconds = Math.round(seconds / 60) * 60;
+      if (seconds > 3600) seconds = 3600;
       return seconds;
     };
 
@@ -358,39 +412,28 @@
       initAudio();
       isRinging = false;
       isDragging = true;
-      
       if (isRunning) stopTimer();
-
       const seconds = getSecondsFromEvent(e);
-      if (seconds !== null) {
-        remainingSeconds = seconds;
-        updateUI();
-      }
-
+      if (seconds !== null) { remainingSeconds = seconds; updateUI(); }
       document.addEventListener('pointermove', handlePointerMove, { passive: false });
       document.addEventListener('pointerup', handlePointerUp);
       document.addEventListener('touchmove', handlePointerMove, { passive: false });
       document.addEventListener('touchend', handlePointerUp);
-      
       if (e.cancelable) e.preventDefault();
     };
 
     let prevSeconds = remainingSeconds;
     const handlePointerMove = (e) => {
       if (!isDragging) return;
-      
       const seconds = getSecondsFromEvent(e);
       if (seconds !== null) {
-        // 0分と60分の境界をまたぐ時の急激なジャンプを防ぐ
         let newSeconds = seconds;
         if (prevSeconds < 300 && seconds > 3300) newSeconds = 0;
         else if (prevSeconds > 3300 && seconds < 300) newSeconds = 3600;
-        
         remainingSeconds = newSeconds;
         prevSeconds = newSeconds;
         updateUI();
       }
-      
       if (e.cancelable) e.preventDefault();
     };
 
@@ -403,16 +446,14 @@
       document.removeEventListener('touchend', handlePointerUp);
     };
 
-    // --- イベントリスナーの登録 ---
+    // --- イベントリスナー ---
     interactionOverlay.addEventListener('pointerdown', handlePointerDown);
     interactionOverlay.addEventListener('touchstart', handlePointerDown, { passive: false });
 
     toggleBtn.addEventListener('click', () => {
       initAudio();
       isRinging = false;
-      if (remainingSeconds > 0) {
-        isRunning ? stopTimer() : startTimer();
-      }
+      if (remainingSeconds > 0) isRunning ? stopTimer() : startTimer();
     });
 
     resetBtn.addEventListener('click', () => {
@@ -430,9 +471,9 @@
 
     // --- 初期化 ---
     drawStaticDial();
-    lucide.createIcons(); // アイコンの描画
+    lucide.createIcons();
+    applyTheme(0);
     updateUI();
-
   </script>
 </body>
 </html>
