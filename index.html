@@ -117,22 +117,43 @@
       <!-- ボタン群 -->
       <div class="flex gap-1.5 md:gap-2">
         <button id="toggle-btn" class="p-2.5 md:p-3 rounded-full text-white transition-all transform active:scale-95 shadow-lg bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 flex items-center justify-center">
-          <i data-lucide="play" id="icon-play" class="ml-0.5 w-5 h-5"></i>
-          <i data-lucide="pause" id="icon-pause" class="hidden w-5 h-5"></i>
+          <!-- play icon -->
+          <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <!-- pause icon -->
+          <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
+            <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+          </svg>
         </button>
         
         <button id="reset-btn" class="p-2.5 md:p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors active:scale-95 flex items-center justify-center">
-          <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+          </svg>
         </button>
         
         <button id="sound-btn" class="p-2.5 md:p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors active:scale-95 flex items-center justify-center">
-          <i data-lucide="volume-2" id="icon-volume-on" class="w-5 h-5"></i>
-          <i data-lucide="volume-x" id="icon-volume-off" class="hidden w-5 h-5"></i>
+          <!-- volume-2 icon -->
+          <svg id="icon-volume-on" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <!-- volume-x icon -->
+          <svg id="icon-volume-off" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
         </button>
 
         <!-- カラーボタン -->
         <button id="color-btn" class="p-2.5 md:p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors active:scale-95 flex items-center justify-center">
-          <i data-lucide="palette" class="w-5 h-5"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -472,7 +493,6 @@
 
     // --- 初期化 ---
     drawStaticDial();
-    lucide.createIcons();
     applyTheme(0);
     updateUI();
   </script>
